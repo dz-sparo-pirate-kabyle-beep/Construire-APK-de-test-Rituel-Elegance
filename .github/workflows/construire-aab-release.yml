@@ -1,0 +1,82 @@
+name: Construire AAB release Rituel Elegance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/construire-aab-release.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  aab-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Extraire le projet original fourni
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q "rituel_elegance_site_complet_android (2).zip" -d extrait
+          test -f extrait/rituel_elegance_site_complet_android/lib/main.dart
+          test -f extrait/rituel_elegance_site_complet_android/pubspec.yaml
+
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Installer Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generer fichiers plateforme Android
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: flutter create --project-name rituel_elegance --org fr.rituelelegance --platforms android .
+
+      - name: Configurer Android
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: python3 scripts/prepare_android.py --package fr.rituelelegance.boutique
+
+      - name: Corriger le code pour Flutter stable
+        working-directory: extrait/rituel_elegance_site_complet_android
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("lib/main.dart")
+          old = "error.isForMainFrame && mounted"
+          new = "(error.isForMainFrame ?? false) && mounted"
+          code = p.read_text(encoding="utf-8")
+          if old not in code:
+              raise SystemExit("Code Dart attendu introuvable")
+          p.write_text(code.replace(old, new), encoding="utf-8")
+          PY
+
+      - name: Installer dependances
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: flutter pub get
+
+      - name: Installer icone RE
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: dart run flutter_launcher_icons
+
+      - name: Construire bundle de test release
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: flutter build appbundle --release
+
+      - name: Publier AAB a signer pour Google Play
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rituel-Elegance-AAB-a-signer
+          path: extrait/rituel_elegance_site_complet_android/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
