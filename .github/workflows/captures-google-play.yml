@@ -48,7 +48,7 @@ jobs:
             adb shell wm size 1080x1920
             adb shell wm density 420
             adb install "apk/app-debug.apk"
-            adb shell am start -n fr.rituelelegance.boutique/.MainActivity
+            adb shell monkey -p fr.rituelelegance.boutique -c android.intent.category.LAUNCHER 1
             sleep 65
             adb exec-out screencap -p > captures/01-Boutique.png
             adb shell input tap 405 1780
