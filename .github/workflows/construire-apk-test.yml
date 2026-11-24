@@ -52,6 +52,21 @@ jobs:
         working-directory: extrait/rituel_elegance_site_complet_android
         run: dart run flutter_launcher_icons
 
+      - name: Corriger compatibilite Flutter actuelle
+        working-directory: extrait/rituel_elegance_site_complet_android
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("lib/main.dart")
+          code = p.read_text(encoding="utf-8")
+          old = "error.isForMainFrame && mounted"
+          new = "(error.isForMainFrame ?? false) && mounted"
+          if old not in code:
+              raise SystemExit("Expression attendue introuvable : verifier le code")
+          p.write_text(code.replace(old, new), encoding="utf-8")
+          PY
+
       - name: Compiler l'APK de test
         working-directory: extrait/rituel_elegance_site_complet_android
         run: flutter build apk --debug
