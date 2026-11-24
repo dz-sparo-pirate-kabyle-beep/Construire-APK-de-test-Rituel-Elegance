@@ -1,0 +1,65 @@
+name: Construire APK test Rituel Elegance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  apk-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Extraire le ZIP du projet Flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q "rituel_elegance_site_complet_android (2).zip" -d extrait
+          test -f extrait/rituel_elegance_site_complet_android/pubspec.yaml
+          test -f extrait/rituel_elegance_site_complet_android/scripts/prepare_android.py
+
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Installer Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generer le projet Android
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: flutter create --project-name rituel_elegance --org fr.rituelelegance --platforms android .
+
+      - name: Configurer l'application Android
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: python3 scripts/prepare_android.py --package fr.rituelelegance.boutique
+
+      - name: Installer les dependances
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: flutter pub get
+
+      - name: Generer l'icone
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: dart run flutter_launcher_icons
+
+      - name: Compiler l'APK de test
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: flutter build apk --debug
+
+      - name: Publier l'APK pour telechargement
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rituel-Elegance-APK-Test
+          path: extrait/rituel_elegance_site_complet_android/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
