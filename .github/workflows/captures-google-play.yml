@@ -1,0 +1,72 @@
+name: Captures Google Play Rituel Elegance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/captures-google-play.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  captures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Recuperer depot
+        uses: actions/checkout@v4
+
+      - name: Telecharger APK de test compile
+        uses: actions/download-artifact@v4
+        with:
+          name: Rituel-Elegance-APK-Test
+          run-id: 45507249414
+          repository: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: apk
+
+      - name: Donner acces a KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Capturer les vrais ecrans Android dans l'emulateur
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            set -euo pipefail
+            mkdir -p captures
+            adb shell wm size 1080x1920
+            adb shell wm density 420
+            adb install "apk/app-debug.apk"
+            adb shell am start -n fr.rituelelegance.boutique/.MainActivity
+            sleep 65
+            adb exec-out screencap -p > captures/01-Boutique.png
+            adb shell input tap 405 1780
+            sleep 55
+            adb exec-out screencap -p > captures/02-Livres-numeriques.png
+            adb shell input tap 675 1780
+            sleep 55
+            adb exec-out screencap -p > captures/03-Devis-automobile.png
+            adb shell input tap 955 1780
+            sleep 55
+            adb exec-out screencap -p > captures/04-Contact.png
+            file captures/*.png
+            ls -lah captures
+
+      - name: Fichiers PNG pour la fiche Google Play
+        uses: actions/upload-artifact@v4
+        with:
+          name: Captures-reelles-Rituel-Elegance-Google-Play
+          path: captures/*.png
+          if-no-files-found: error
+          retention-days: 14
