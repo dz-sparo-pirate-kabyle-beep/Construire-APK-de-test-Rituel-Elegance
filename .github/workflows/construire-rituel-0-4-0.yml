@@ -1,4 +1,4 @@
-name: Rituel Elegance 0.4.0 - AdMob TEST
+name: Rituel Elegance 0.4.0 - AdMob PRODUCTION
 
 on:
   workflow_dispatch:
@@ -49,7 +49,7 @@ jobs:
       - name: Base 0.3.0
         run: python3 release/prepare_v03.py
 
-      - name: Ajouter AdMob 0.4.0 avec annonces de test et consentement
+      - name: Ajouter AdMob 0.4.0 avec consentement
         run: python3 release/prepare_v04.py
 
       - name: Installer dependances
@@ -66,12 +66,12 @@ jobs:
 
       - name: Compiler bundle 0.4.0 code 4
         working-directory: extrait/rituel_elegance_site_complet_android
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=RITUEL_LIVE_ADS=true
 
       - name: Publier AAB pour signature locale
         uses: actions/upload-artifact@v4
         with:
-          name: Rituel-Elegance-0.4.0-AdMob-TEST-AAB
+          name: Rituel-Elegance-0.4.0-AdMob-PRODUCTION-AAB
           path: extrait/rituel_elegance_site_complet_android/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
