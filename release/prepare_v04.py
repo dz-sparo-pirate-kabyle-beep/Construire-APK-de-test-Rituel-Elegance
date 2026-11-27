@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare AdMob version 0.4.0+4 from the generated 0.3.0+3 Flutter project."""
+"""Prepare AdMob version 0.4.1+5 from the generated 0.3.0+3 Flutter project."""
 from pathlib import Path
 root = Path(__file__).resolve().parent.parent / "extrait" / "rituel_elegance_site_complet_android"
 main = root / "lib/main.dart"
@@ -26,12 +26,12 @@ source = source.replace(needle, needle + """
   BannerAd? _bannerAd;
   bool _adsInitialized = false;
   bool _privacyOptionsRequired = false;
-  bool _sensitivePage = false;
+  bool _sensitivePage = true;
   bool _bannerLoading = false;
 """, 1)
 needle = "    super.initState();\n    _web = WebViewController()"
 assert needle in source
-source = source.replace(needle, "    super.initState();\n    _prepareConsentAndAds();\n    _web = WebViewController()", 1)
+source = source.replace(needle, "    super.initState();\n    WidgetsBinding.instance.addPostFrameCallback((_) {\n      if (mounted) _prepareConsentAndAds();\n    });\n    _web = WebViewController()", 1)
 needle = """        onPageStarted: (_) {
           if (mounted) setState(() => _loadError = false);
         },"""
@@ -52,6 +52,7 @@ assert needle in source
 methods = r"""
   void _prepareConsentAndAds() {
     // UMP refresh at every launch. Request ads only when canRequestAds is true.
+    try {
     ConsentInformation.instance.requestConsentInfoUpdate(
       ConsentRequestParameters(),
       () async {
@@ -70,12 +71,16 @@ methods = r"""
       },
       (error) async => _loadAdsIfAllowed(),
     );
+    } catch (_) {
+      // Ads must never prevent the store from opening.
+    }
   }
 
   Future<void> _loadAdsIfAllowed() async {
     if (!mounted || _adsInitialized) return;
     try {
       if (!await ConsentInformation.instance.canRequestAds()) return;
+      if (!mounted || _adsInitialized) return;
       _adsInitialized = true;
       await MobileAds.instance.initialize();
       if (mounted) await _loadBanner();
@@ -163,7 +168,7 @@ main.write_text(source, encoding="utf-8")
 
 s = pubspec.read_text(encoding="utf-8")
 assert "version: 0.3.0+3" in s and "google_mobile_ads:" not in s
-s = s.replace("version: 0.3.0+3", "version: 0.4.0+4", 1)
+s = s.replace("version: 0.3.0+3", "version: 0.4.1+5", 1)
 s = s.replace("  webview_flutter: ^4.13.0", "  google_mobile_ads: ^9.2.0\n  webview_flutter: ^4.13.0", 1)
 pubspec.write_text(s, encoding="utf-8")
 
@@ -175,4 +180,4 @@ m = m[:idx] + """
                    android:value="ca-app-pub-1247287523375640~8275319994"/>
 """ + m[idx:]
 manifest.write_text(m, encoding="utf-8")
-print("0.4.0+4: AdMob + UMP installed. Test ads enabled; live ads disabled.")
+print("0.4.1+5: AdMob + UMP installed. Ad mode selected at build time.")
