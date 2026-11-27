@@ -1,4 +1,4 @@
-name: Rituel Elegance 0.4.0 - AdMob PRODUCTION
+name: Rituel Elegance 0.4.2 - SANS PUBLICITE
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/construire-rituel-0-4-0.yml"
-      - "release/prepare_v04.py"
+      - "release/prepare_v03.py"
 
 permissions:
   contents: read
@@ -49,8 +49,11 @@ jobs:
       - name: Base 0.3.0
         run: python3 release/prepare_v03.py
 
-      - name: Ajouter AdMob 0.4.0 avec consentement
-        run: python3 release/prepare_v04.py
+      - name: Version 0.4.2 sans SDK publicitaire
+        working-directory: extrait/rituel_elegance_site_complet_android
+        run: |
+          python3 -c 'from pathlib import Path; p=Path("pubspec.yaml"); s=p.read_text(); assert "version: 0.3.0+3" in s; assert "google_mobile_ads:" not in s; p.write_text(s.replace("version: 0.3.0+3", "version: 0.4.2+6", 1))'
+          ! grep -q "com.google.android.gms.ads.APPLICATION_ID" android/app/src/main/AndroidManifest.xml
 
       - name: Installer dependances
         working-directory: extrait/rituel_elegance_site_complet_android
@@ -64,14 +67,14 @@ jobs:
         working-directory: extrait/rituel_elegance_site_complet_android
         run: dart run flutter_launcher_icons
 
-      - name: Compiler bundle 0.4.0 code 4
+      - name: Compiler bundle 0.4.2 code 6
         working-directory: extrait/rituel_elegance_site_complet_android
-        run: flutter build appbundle --release --dart-define=RITUEL_LIVE_ADS=true
+        run: flutter build appbundle --release
 
       - name: Publier AAB pour signature locale
         uses: actions/upload-artifact@v4
         with:
-          name: Rituel-Elegance-0.4.0-AdMob-PRODUCTION-AAB
+          name: Rituel-Elegance-0.4.2-SANS-PUBLICITE-AAB
           path: extrait/rituel_elegance_site_complet_android/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
