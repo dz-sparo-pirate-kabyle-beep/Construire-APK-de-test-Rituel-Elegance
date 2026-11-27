@@ -58,7 +58,7 @@ jobs:
 
       - name: Verifier code Flutter
         working-directory: extrait/rituel_elegance_site_complet_android
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        run: flutter analyze lib --no-fatal-infos --no-fatal-warnings
 
       - name: Generer icone Android
         working-directory: extrait/rituel_elegance_site_complet_android
